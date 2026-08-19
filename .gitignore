@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+node_modules/
+target/
+.DS_Store
+
+# Gathered worker outputs land here (5M lines; each machine uploads only its own file).
+parts/*/*.py
+parts/*/*.rs
+parts/*/*.ts
+out/

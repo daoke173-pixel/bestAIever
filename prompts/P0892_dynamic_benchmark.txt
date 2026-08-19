@@ -1,0 +1,304 @@
+==============================================================================
+HYPERION-Ω  ·  WORKER P0892  ·  ONE FILE  ·  ~5000 LINES
+==============================================================================
+
+ROLE
+----
+You are worker P0892 of 1000 independent Claude Opus 5 instances building HYPERION-OMEGA, a general AI that must beat Claude Opus 5 on every benchmark and run 100x
+faster. You are running on your own machine. You have NO access to the other 999 workers,
+NO shared folder, NO ability to ask questions. Everything you need is in this prompt.
+Produce your file in one pass. Do not ask for clarification. Do not stop early.
+
+Ω-CONTRACT (FROZEN — COPY VERBATIM INTO YOUR FILE HEADER)
+------------------------------------------------------------------------------
+=== OMEGA CONTRACT v1.0.0-frozen (COPY VERBATIM INTO EVERY PART FILE) ===
+
+C1. IDENTITY
+    Every part file declares exactly one manifest constant:
+        PART_MANIFEST = {
+          "part_id":      "P0001",              # P0001..P1000, unique
+          "tier":         "T01",
+          "module":       "hyperion.t01.foundation.abi_types",
+          "version":      "1.0.0",
+          "contract":     "1.0.0-frozen",
+          "loc_target":   5000,
+          "provides":     ["cap.t01.abi.types@1"],     # capability URIs, this part owns them
+          "requires":     ["cap.t01.abi.errors@1"],    # capability URIs, resolved at link time
+          "determinism":  "pure" | "seeded" | "io",
+          "latency_ns":   12000,                        # p99 budget for its hot entry point
+        }
+
+C2. CAPABILITY URIs
+    Format: cap.<tier>.<domain>.<name>@<major>   e.g. cap.t08.cascade.scheduler@1
+    A part MUST NOT import another part's file, path, or symbol. All cross-part
+    interaction happens through capability lookup on the Ω-Bus:
+        bus.acquire("cap.t02.attn.flash_decode@1") -> handle
+    Missing capabilities MUST degrade to a declared local fallback, never crash.
+
+C3. REQUIRED SYMBOLS (every part, every language)
+    PART_MANIFEST            - as above
+    register(bus)            - idempotent; publishes every capability in `provides`
+    selftest()               - runs the in-file suite, returns SelfTestReport
+    microbench(iters)        - returns BenchReport with p50/p99/throughput
+    describe()              - returns machine-readable capability schema (JSON-able)
+
+C4. WIRE FORMAT
+    OmegaEnvelope {
+      trace_id: u128, span_id: u64, parent_span: u64,
+      capability: str, payload: bytes (canonical deterministic CBOR),
+      deadline_ns: u64, budget: {tokens:u32, flops:u64, usd_micro:u32},
+      provenance: [{part_id, version, hash}],
+      integrity: blake3-256 over (capability || payload || deadline_ns)
+    }
+    Canonical CBOR = RFC 8949 deterministic encoding, map keys sorted bytewise.
+
+C5. ERROR MODEL
+    OmegaError { code: OmegaCode, retryable: bool, budget_consumed, cause_chain, remedy }
+    Code ranges: 1xxx contract/link, 2xxx resource, 3xxx numeric, 4xxx timeout/deadline,
+    5xxx capability-missing, 6xxx safety-refusal, 7xxx verification-failed,
+    8xxx external/tool, 9xxx internal-invariant. NEVER raise a bare language error
+    across a capability boundary.
+
+C6. DETERMINISM
+    All randomness derives from `split_seed(root_seed, part_id, call_index)` (ChaCha20).
+    Any part marked "pure" or "seeded" MUST produce byte-identical output for identical
+    input across platforms, thread counts and batch sizes. Floating-point reductions use
+    a fixed pairwise order; no atomics-order-dependent accumulation in deterministic mode.
+
+C7. BUDGETS
+    Every public entry point accepts a deadline and a budget and MUST return a partial
+    result plus OmegaCode 4001 rather than exceeding either. Latency budgets in
+    PART_MANIFEST are p99 at the declared reference shape.
+
+C8. SAFETY
+    Any part that can emit tokens, execute code, touch a network, or actuate a device
+    MUST route the action through cap.t19.gate.action_filter@1 before performing it and
+    MUST honour a refusal verdict. Absence of the gate = fail closed.
+
+C9. OBSERVABILITY
+    Structured events only: emit_event({ts_ns, part_id, span, level, code, kv}).
+    No printing to stdout/stderr from library paths. Every hot loop exports counters
+    through cap.t20.telemetry.counter@1 when available.
+
+C10. TESTING
+    Each file ends with an in-file suite: >= 40 test cases, >= 90% branch coverage of its
+    own logic, property-based tests for every invariant, a determinism replay test, an
+    adversarial/fuzz test, and a microbenchmark asserting the declared latency budget.
+    Tests must pass offline, single-machine, in < 60 s, with no shared fixtures.
+
+C11. FILE SHAPE
+    Exactly ONE file per part. 4500-5500 physical lines (target 5000). Header comment block
+    must contain: part id, module, mission, provides, requires, LOC map, and this contract
+    digest line: `OMEGA-CONTRACT-DIGEST: v1.0.0-frozen`.
+
+C12. NO SHARED STATE
+    No global mutable state outside a single `_OMEGA_STATE` registry guarded by a lock.
+    No import-time side effects. No filesystem writes outside a caller-provided path.
+=== END OMEGA CONTRACT ===
+------------------------------------------------------------------------------
+
+YOUR PART
+---------
+part_id      : P0892  (42/50 of tier T18)
+tier         : T18 — Evaluation, Benchmarking & Dominance Proofs
+title        : Dynamic & Contamination-Resistant Benchmarks
+file         : parts/t18_eval/P0892_dynamic_benchmark.py          <-- create exactly this path, nothing else
+module       : hyperion.t18.eval.dynamic_benchmark
+language     : Python 3.13
+capability   : cap.t18.dynamic.dynamic_benchmark@1
+determinism  : seeded
+p99 budget   : 49000 ns
+line budget  : 5000 (+/- 3%)
+tier benches : SWE-bench Verified, ARC-AGI-3, OSWorld 2.0, GDPval-AA v2 (Elo)
+
+MISSION
+-------
+Benchmarks that cannot be gamed by memorisation.
+
+Tier context:
+  Reproducible harnesses for every public and internal benchmark, plus the
+  statistical machinery that proves domination of Opus 5.
+
+MANDATE — implement all four. None is optional. None may be stubbed.
+-------------------------------------------------------------------
+  1. procedural task generation with unbounded fresh instances
+  2. difficulty-matched generation validated against static equivalents
+  3. contamination-resistance verification
+  4. correlation with established benchmarks demonstrating validity
+
+Expanded obligations:
+  1. Implement procedural task generation with unbounded fresh instances as a
+     first-class, fully realised mechanism. No stub, no
+     `NotImplementedError`, no configuration flag whose default disables it.
+     Its state must be reportable through `describe()` and it must be
+     exercised by at least eight in-file tests, including one that fails
+     loudly if the mechanism is silently bypassed. Correctness here is what
+     makes the tier's SWE-bench Verified target reachable; the part therefore
+     ships a microbenchmark that stands in for that benchmark's inner loop.
+  2. Implement difficulty-matched generation validated against static
+     equivalents, and make it correct under concurrency: at least 64
+     in-flight `OmegaEnvelope`s must be able to traverse it simultaneously.
+     No lock, mutex or borrow may be held across an `await` / `.await` /
+     `yield` boundary, and the part must expose a contention counter so T09
+     can attribute latency to it. This mechanism sits on the critical path of
+     ARC-AGI-3, so its p99 latency assertion is part of the acceptance
+     criteria, not an optional extra.
+  3. Implement contamination-resistance verification with an explicit
+     *a-priori* cost model. Before doing the work the part must be able to
+     state the tokens, FLOPs and microseconds it intends to consume, and it
+     must abort with an `OmegaError` in the 4xxx budget range rather than
+     silently exceed the envelope's `budget` or `deadline_ns`. Its
+     contribution is measured against OSWorld 2.0 — a regression on that
+     benchmark is an automatic rejection of this part.
+  4. Implement correlation with established benchmarks demonstrating validity
+     together with its verification path, so that anything this mechanism
+     produces can be independently re-checked *inside this same file* without
+     contacting any other part. The checker must be cheap enough to run on
+     every call in debug mode and must be wired into `selftest()`.
+     Correctness here is what makes the tier's GDPval-AA v2 (Elo) target
+     reachable; the part therefore ships a microbenchmark that stands in for
+     that benchmark's inner loop.
+
+REQUIRED SYMBOLS (exact names; the linker looks for these and nothing else)
+--------------------------------------------------------------------------
+  PART_MANIFEST      : a frozen mapping with keys
+                       part_id, capability, provides, requires, determinism,
+                       latency_ns, loc, contract_version, schema_hash
+  register(bus)      : idempotent; publishes `provides` on the Ω-Bus; returns a
+                       teardown handle; MUST NOT fail if `requires` are missing
+  selftest()         : -> (ok: bool, report: dict); offline; < 60 s; runs in
+                       degraded mode when the bus is empty
+  microbench(iters)  : -> dict with p50/p99/throughput; asserts
+                       p99 <= 49000 ns at the reference shape
+  describe()         : -> JSON-serialisable dict: schemas, version, degraded{}
+
+PROVIDES
+--------
+  cap.t18.dynamic.dynamic_benchmark@1
+  cap.t18.dynamic.dynamic_benchmark.describe@1
+
+REQUIRES — and the fallback you MUST write for each one
+------------------------------------------------------
+You may NEVER assume a requirement resolves: the other 999 workers are on other
+machines and their files may not exist when yours is loaded. For each line below,
+write: try-acquire -> on failure use the fallback -> record it in describe()['degraded'].
+
+  cap.t01.abi.abi_types@1
+      if unavailable: re-declare the structural minimum locally (a frozen
+      dataclass/struct mirror) and set `degraded['abi']='local-mirror'`
+
+  cap.t01.abi.abi_errors@1
+      if unavailable: raise the local `_OmegaErrorShim` carrying the same
+      numeric code, and set `degraded['errors']='shim'`
+
+  cap.t01.omega.omega_bus_core@1
+      if unavailable: run against the in-file `_LoopbackBus` (direct call,
+      no queue) and set `degraded['bus']='loopback'`
+
+  cap.t18.benchmark.benchmark_construction@1
+      if unavailable: use the in-file conservative substitute for
+      `benchmark_construction` (documented, slower, lower quality) and set
+      `degraded['benchmark_construction']='local'`
+
+  cap.t01.omega.omega_bus_ipc@1
+      if unavailable: use the in-file conservative substitute for
+      `omega_bus_ipc` (documented, slower, lower quality) and set
+      `degraded['omega_bus_ipc']='local'`
+
+  cap.t12.patch.patch_synthesis@1
+      if unavailable: use the in-file conservative substitute for
+      `patch_synthesis` (documented, slower, lower quality) and set
+      `degraded['patch_synthesis']='local'`
+
+  cap.t13.browser.browser_agent@1
+      if unavailable: use the in-file conservative substitute for
+      `browser_agent` (documented, slower, lower quality) and set
+      `degraded['browser_agent']='local'`
+
+DETERMINISM
+-----------
+  seeded — all randomness is drawn from split_seed(root_seed, part_id,
+  call_index). Given the same seed triple the output is byte-identical. The
+  part must never touch a global RNG.
+
+LINE MAP — write your file in exactly these sections, in this order.
+-------------------------------------------------------------------
+   1. [ 180 lines] Header block + OMEGA CONTRACT verbatim copy + PART_MANIFEST
+                     Contract digest line, mission, provides/requires, LOC map,
+                     revision notes.
+   2. [ 320 lines] Public types, schemas and constants owned by this part
+                     Every type this part publishes, fully documented, with invariants
+                     stated.
+   3. [ 600 lines] Core implementation A - procedural task generation with unbounded fresh instances
+                     Primary algorithm. No TODOs, no placeholders, no stubbed branches.
+   4. [ 580 lines] Core implementation B - difficulty-matched generation validated against static equivalen
+                     Second required mechanism, fully independent of A's internals.
+   5. [ 520 lines] Core implementation C - contamination-resistance verification
+                     Third required mechanism.
+   6. [ 480 lines] Core implementation D - correlation with established benchmarks demonstrating validity
+                     Fourth required mechanism, including its measurement/assertion
+                     path.
+   7. [ 210 lines] Ω-Bus integration: register(), describe(), capability handles
+                     Idempotent registration, schema export, handle lifetime and
+                     teardown.
+   8. [ 200 lines] Degradation ladder: declared fallbacks for every required capability
+                     For each entry in `requires`, a working local fallback + quality
+                     annotation.
+   9. [ 250 lines] Error paths, budget/deadline handling, partial results
+                     Every OmegaCode this part can emit, with remedy text and
+                     retryability.
+  10. [ 150 lines] Observability: events, counters, histograms, latency attribution
+                     Structured events only; no stdout. Counters registered through T20
+                     telemetry.
+  11. [ 170 lines] Determinism harness: split_seed usage, replay, batch-invariance
+                     Proves the declared determinism class holds.
+  12. [ 440 lines] In-file test suite: >= 40 cases (unit + boundary + regression)
+                     pytest/cfg(test)/vitest style per language, no shared fixtures,
+                     offline.
+  13. [ 250 lines] Property-based tests for every stated invariant
+                     Generators + shrinkers; each invariant named in a comment.
+  14. [ 170 lines] Adversarial / fuzz tests
+                     Coverage-guided in-process fuzzing within the 60s budget.
+  15. [ 180 lines] Microbenchmark + latency-budget assertion
+                     Asserts p99 <= 49000 ns at the declared reference shape.
+  16. [ 300 lines] Documentation block: usage, rationale, limitations, references
+                     Honest limitations section is mandatory; no overstated claims.
+      TOTAL: 5000 lines
+
+LANGUAGE RULES (Python 3.13)
+------------------------------------------------------------------------------
+  tests   : pytest-compatible `test_*` functions inside the same file
+  format  : ruff format + ruff check --select ALL (no suppressions except documented ones)
+  typing  : full PEP 695 generics, `from __future__ import annotations`, mypy --strict clean
+  deps    : stdlib only, plus optional numpy>=2.2 behind a lazy import guard
+
+HARD PROHIBITIONS
+-----------------
+  * Do NOT import, reference, read or guess the contents of any other parts/** file.
+  * Do NOT create, rename or delete any file other than your own.
+  * No TODO, FIXME, 'pass  # later', NotImplementedError, or empty except.
+  * No global mutable state; no module-level side effects; no printing outside a
+    debug guard; no network in selftest(); no wall-clock/RNG outside your class.
+  * Do not shorten the file by deleting tests. The line map is the contract.
+
+SELF-VERIFICATION BEFORE YOU EMIT (answer each internally, then fix)
+-------------------------------------------------------------------
+  1. Does the contract header appear verbatim, and does PART_MANIFEST match this prompt
+     exactly (capability == cap.t18.dynamic.dynamic_benchmark@1)?
+  2. Do all five required symbols exist with the exact signatures?
+  3. With an EMPTY bus, does selftest() still return True in degraded mode?
+  4. Is every `requires` entry paired with a real, working fallback?
+  5. Does microbench() actually assert p99 <= 49000 ns?
+  6. Is the declared determinism class `seeded` provably held?
+  7. Are there >= 40 test cases, property tests for each invariant, and a fuzz target?
+  8. Is the total line count within 3% of 5000?
+  9. Is the Limitations section honest and specific (no marketing claims)?
+ 10. Would this file compile/run on a clean machine with only the declared deps?
+
+OUTPUT FORMAT
+-------------
+  Emit ONE fenced code block containing the complete contents of `parts/t18_eval/P0892_dynamic_benchmark.py`.
+  No prose before or after it. No ellipses. No '... rest omitted'. Complete file only.
+
+BEGIN NOW.
+==============================================================================
